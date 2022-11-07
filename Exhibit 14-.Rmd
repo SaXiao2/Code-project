@@ -1,0 +1,1021 @@
+---
+title: "Exhibit 14-"
+author: "Sa Xiao"
+date: '2022-08-14'
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+## datas
+year = 2021
+TRAFFIC = 'Traffic 2021.xlsx'
+```
+
+```{r, include=FALSE, echo=FALSE, warning = FALSE}
+library(readxl)
+library(tidyr)
+library(tidyverse)
+library(dplyr)
+library(knitr)
+library(magrittr)
+library(huxtable)
+library(openxlsx)
+library(ggplot2)
+library(glue)
+
+
+# Read df and filtered out na
+df <- read_excel('NAR_2021_Master_Database_08-26-2022rev.xlsx')
+# Get rid of typo
+df3 <- df%>%filter(str_detect(Cartype, '^Tank'))
+df3_sub <- df%>%filter(!str_detect(df$Cartype, '^Tank'))
+df3$Cartype <- 'Tank Car'
+df <- rbind(df3, df3_sub)
+df_14 = read_excel("NAR-Total-Code-Check-02-13-2020_Modified.xlsx")
+Exh_32_data = read_excel("Exh_32_data.xlsx")
+# Only remain valid columns
+df1 <- df%>%filter(!is.na(df$Cartype))
+```
+
+```{r Exhibit11 preparing, echo=FALSE, warning = FALSE}
+#Remove floating number
+haz_class = c()
+for (i in df3$`Hazard Class`) {
+  converted_i = as.double(i)
+  if (!is.na(converted_i)) {
+    haz_class = append(haz_class, round(converted_i,2))
+  } else {
+    haz_class = append(haz_class,i)
+  }
+}
+df3$`Hazard Class` = haz_class
+
+#Count Hazard Class and PSN
+Hazard2.1 = df3%>%
+  filter(`Hazard Class` == 2.1)%>%
+  count()
+
+Hazard2.2 = df3%>%
+  filter(`Hazard Class` == 2.2)%>%
+  count()
+
+Hazard2.3 = df3%>%
+  filter(`Hazard Class` == 2.3)%>%
+  count()
+
+Hazard_cl = df3%>%
+  filter(`Hazard Class` == 'CL')%>%
+  count()
+
+Hazard3 = df3%>%
+  filter(`Hazard Class` == 3)%>%
+  count()
+
+Hazard5.1 = df3%>%
+  filter(`Hazard Class` == 5.1)%>%
+  count()
+
+Hazard6.1 = df3%>%
+  filter(`Hazard Class` == 6.1)%>%
+  count()
+
+Hazard8 = df3%>%
+  filter(`Hazard Class` == 8)%>%
+  count()
+
+Hazard9 = df3%>%
+  filter(`Hazard Class` == 9)%>%
+  count()
+
+Hazard_other = df3%>%
+  filter(`Hazard Class` != 2.1 & `Hazard Class` != 2.2 & `Hazard Class` != 2.3 & `Hazard Class` != 'CL' & `Hazard Class` != 3 & `Hazard Class` != 5.1 & `Hazard Class` != 6.1 & `Hazard Class` != 8 & `Hazard Class` != 9)%>%
+  count()
+
+#2.1
+LPG_num = df3%>%
+   filter(`PSN Group` == 'LPG' & `Hazard Class` == 2.1)%>%
+   count()
+#2.2  
+Ammonia_num = df3%>%
+  filter(str_detect(`PSN Group`,'Ammonia'))%>%
+  count()
+#2.3
+Chlorine_num = df3%>%
+  filter(str_detect(`PSN Group`, 'Chlorine') & `Hazard Class` == 2.3)%>%
+  count()
+
+#3
+Alcohols_num = df3%>%
+  filter(str_detect(`PSN Group`, 'Alcohols') & `Hazard Class` == 3)%>%
+  count()
+
+Petroleum_num = df3%>%
+  filter(str_detect(`PSN Group`, 'Petroleum Crude Oil') & `Hazard Class` == 3)%>%
+  count()
+
+#8
+Sulfuric_num = df3%>%
+  filter(`PSN Group` == 'Sulfuric Acid' & `Hazard Class` == 8)%>%
+  count()
+
+Hydrochloric_num = df3%>%
+  filter(`PSN Group` == 'Hydrochloric Acid' & `Hazard Class` == 8)%>%
+  count()
+
+Phosphoric_num = df3%>%
+  filter(str_detect(`PSN Group` ,'Phosphoric Acid') & `Hazard Class` == 8)%>%
+  count()
+
+Sodium_num = df3%>%
+  filter(str_detect(`PSN Group` ,'Sodium Hydroxide') & `Hazard Class` == 8)%>%
+  count()
+
+#Merge and reshape
+Exh_11 = data_frame(`Hazard Class` = c("Hazard Class 2.1","LPG","Hazard Class 2.2","Ammonia","Hazard Class 2.3","Chlorine","Hazard Class 3","Alcohols","Petroleum Crude Oil","Combustible Liquid","Hazard Class 5.1","Hazard Class 6.1","Hazard Class 8","Sulfuric","Hydrochloric","Phosphoric","Sodium","Hazard Class 9","Other Hazard Class"),n = c(Hazard2.1,LPG_num,Hazard2.2,Ammonia_num,Hazard2.3,Chlorine_num,Hazard3,Alcohols_num,Petroleum_num,Hazard_cl,Hazard5.1,Hazard6.1,Hazard8,Sulfuric_num,Hydrochloric_num,Phosphoric_num,Sodium_num,Hazard9,Hazard_other))
+Exh_11$n = as.integer(Exh_11$n)
+
+Exh_11[nrow(Exh_11)+1,] = c("Total U.S. & Canada", count(df3))
+
+#Percentage
+Exh11_orig = data_frame('origination' = c(357,247,22,28,51,21,951,293,239,65,15,21,250,60,23,26,72,173,22,1923))
+Exh_11 = cbind(Exh_11,Exh11_orig)
+Exh_11 = Exh_11%>%
+  mutate(per = round(n/origination,3))
+
+```
+
+```{r Exh 11 dataframe}
+Exh_11_str = read.xlsx("Exh_11.xlsx")
+```
+
+```{r Exhibit12 preparing, echo=FALSE, warning = FALSE}
+Exh_12 = as_data_frame(Exh_11[c(1,3,7,10,13,20),4])
+colnames(Exh_12) = year
+rownames(Exh_12) = c("Hazard Class 2.1","Hazard Class 2.2","Hazard Class 3","Combustible Liquid","Hazard Class 8","All Hazmat Classes")
+```
+
+```{r Exh 12 data, echo=FALSE,warning=FALSE}
+df12 = read_excel('Exhibit 11-13.xlsx',sheet = "Exh12 updated")
+df12 = df12[c(3:8),c(3:12)]
+colnames(df12) = c(seq(2011,year))
+rownames(df12) = c("Hazard Class 2.1", "Hazard Class 2.2", "Hazard Class 3", "Combustible Liquid", "Hazard Class 8", "All Hazmat Classes")
+df12 = cbind(df12,Exh_12)
+#Output new dataframe df12
+df12 = as.data.frame(t(df12))
+df12 = df12%>%
+  mutate(Year = c(seq(2011,year)))
+df12 = df12%>%
+  gather(key = "type", value = "value", -Year)
+df12$Year = as.numeric(df12$Year)
+df12$value = as.numeric(df12$value)
+df12_1 = df12%>%
+  filter(Year >= year -5)
+df12_2 = df12%>%
+  filter(Year < year -5)
+```
+
+```{r}
+#Plot
+Exh_12_plot = ggplot(data = df12_1, aes(x = Year, y = value, color = type, linetype = type))+
+  geom_line(size = 0.8)+
+  geom_point(aes(shape=type), size=3)+
+  scale_shape_manual(values = c(`Hazard Class 2.1` = 16, `Hazard Class 2.2` = 21, `Hazard Class 3` = 17, `Hazard Class 8` = 18, `All Hazmat Classes` = 0, `Combustible Liquid` = 15))+
+  scale_linetype_manual(values = c(`Hazard Class 2.1` = "solid", `Hazard Class 2.2` = "solid", `Hazard Class 3` = "solid", `Hazard Class 8` = "solid", `All Hazmat Classes` = "longdash", `Combustible Liquid` = "solid"))+
+  scale_color_manual(values = c(`Hazard Class 2.1` = "orange", `Hazard Class 2.2` = "blue", `Hazard Class 3` = "red", `Hazard Class 8` = "brown", `All Hazmat Classes` = "black", `Combustible Liquid` = "darkorchid4"))+
+  labs(title = "Exhibit 12\nTank Car NAR Rate by Major Hazard Class, U.S. and Canada: 2016-2021*")+
+  theme_bw()+
+  theme(plot.title.position = "plot",
+        axis.title.x = element_text(size = rel(1), face = "bold"),
+        axis.title.y = element_text(size = rel(1), face = "bold"),
+        legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = rel(1.15), face = "bold"))+
+  theme(panel.grid.major.x=element_blank(),panel.grid.minor.x=element_blank(),
+        panel.grid.major = element_line(colour = "#C0D9D9"))+
+  theme(axis.line = element_line())+
+  theme(panel.border = element_blank())+
+  theme(axis.text = element_text(size = rel(0.9), face = "bold", colour = "black"))+
+  scale_y_continuous("NARs per 1000 Originations",limits = c(0,1.2),breaks = seq(0,1.2,0.2),expand = c(0,0))+
+  scale_x_continuous("Year",limits = c(year-5.5,year+0.5),breaks = seq(year-5,year,1),expand = c(0,0))+
+  #Manual add text. Need change position every year!!!!
+  geom_text(x = 2021, y = 1.05, label = "Division 2.2", color = "blue")+
+  geom_text(x = 2021, y = 0.4, label = "Class 8", color = "brown")+
+  geom_text(x = 2017, y = 0.32, label = "Combustible Liquid", color = "darkorchid4")+
+  geom_text(x = 2016, y = 0.28, label = "All commodities")+
+  geom_text(x = 2021, y = 0.26, label = "Class 3", color = "red")+
+  geom_text(x = 2016, y = 0.1, label = "Division 2.1", color = "orange")
+
+Exh_12_plot
+#ggsave("Exh_12_plot.png")
+```
+
+```{r Exhibit13 preparing, echo=FALSE, warning = FALSE}
+Exh_13 = as_data_frame(Exh_11[c(2,4,6,14,15,20,8,9,16,17),4])
+colnames(Exh_13) = year
+rownames(Exh_13) = c("LPG","Ammonia","Chlorine","Sulfuric","Hydrochloric","Total U.S. & Canada","Alcohols","Petroleum Crude Oil","Phosphoric","Sodium")
+```
+
+```{r Exh 13 plot}
+df13 = read_excel('Exhibit 11-13.xlsx',sheet = "Exh13 updated")
+df13 = df13[c(2:11),]
+colnames(df13) = c(" ",seq(2011,year))
+df13 = cbind(df13,Exh_13)
+#Output new dataframe df13
+df13 = as.data.frame(t(df13))
+df13 = df13[-1,]
+df13 = df13[,c(2,4,5,6,7,8)]
+df13 = df13%>%
+  mutate(Year = c(seq(2011,year)))
+df13 = df13%>%
+  gather(key = "type", value = "value", -Year)
+df13$Year = as.numeric(df13$Year)
+df13$value = as.numeric(df13$value)
+df13_1 = df13%>%
+  filter(Year >= year -5)
+df13_2 = df13%>%
+  filter(Year < year -5)
+#Plot
+ggplot(data = df13_1, aes(x = Year, y = value, color = type))+
+  geom_line()+
+  geom_point()
+
+ggplot(data = df13_2, aes(x = Year, y = value, color = type))+
+  geom_line()+
+  geom_point()
+```
+
+
+```{r exhibit 14 raw data prepared, warning = FALSE}
+#############################Get all the cause code#################################
+Exh_14_tank = df%>%
+  filter(Cartype == 'Tank Car')
+
+code14_1 = Exh_14_tank[,c(10,11,16,22)]
+code14_2 = Exh_14_tank[,c(10,11,16,23)]
+code14_3 = Exh_14_tank[,c(10,11,16,24)]
+colnames(code14_1) = c("PSN","UNNA","Spec","Cause Code")
+colnames(code14_2) = c("PSN","UNNA","Spec","Cause Code")
+colnames(code14_3) = c("PSN","UNNA","Spec","Cause Code")
+new14 = rbind(code14_1,code14_2,code14_3)
+
+#Merge by the following cause
+Exh_14_raw = merge(df_14,new14,"Cause Code")
+```
+
+```{r Exhibit14 preparing, echo=FALSE, warning = FALSE}
+###############################Cars#############################################
+df_14 = read_excel("NAR-Total-Code-Check-02-13-2020_Modified.xlsx")
+Exh_14 = df%>%
+  group_by(Cartype)%>%
+  count()%>%
+  arrange(desc(n))
+Exh_14[nrow(Exh_14)+1,] = data_frame("All Car Types",nrow(df))
+Exh_14 = Exh_14[c(4,1,2,3),]
+colnames(Exh_14) = c('Non-Accident Release',year)
+
+#Pressure Relief Valve or Vent
+prvv = Exh_14_raw%>%
+  filter(`Source (Exhibit 14 of the BOE Leak)`=="Pressure Relief Valve or Vent")%>%
+  count()
+
+prv = Exh_14_raw%>%
+  filter(`Source (Exhibit 14 of the BOE Leak)`=="Pressure Relief Valve or Vent" & `Sub Category (Exhibit 14 of the BOE Leak)`=="Pressure Relief Valve")%>%
+  count()
+
+svdr = Exh_14_raw%>%
+  filter(`Source (Exhibit 14 of the BOE Leak)`=="Pressure Relief Valve or Vent" & `Sub Category (Exhibit 14 of the BOE Leak)`=="Disc Ruptured")%>%
+  count()
+
+svo = Exh_14_raw%>%
+  filter(`Source (Exhibit 14 of the BOE Leak)`=="Pressure Relief Valve or Vent" & `Sub Category (Exhibit 14 of the BOE Leak)`=="Safety Vent - Other")%>%
+  count()
+
+#Manway/Pressure Plate
+mpp = Exh_14_raw%>%
+  filter(`Source (Exhibit 14 of the BOE Leak)`=="Manway/Pressure Plate")%>%
+  count()
+
+hb = Exh_14_raw%>%
+  filter(`Source (Exhibit 14 of the BOE Leak)`=="Manway/Pressure Plate" & `Sub Category (Exhibit 14 of the BOE Leak)`== "Hinged & Bolted")%>%
+  count()
+
+pp = Exh_14_raw%>%
+  filter(`Source (Exhibit 14 of the BOE Leak)`=="Manway/Pressure Plate" & `Sub Category (Exhibit 14 of the BOE Leak)`== "Pressure Plate")%>%
+  count()
+
+#Fill Hole
+fh = Exh_14_raw%>%
+  filter(`Source (Exhibit 14 of the BOE Leak)`=="Fill Hole")%>%
+  count()
+
+#Liquid Line
+ll = Exh_14_raw%>%
+  filter(`Source (Exhibit 14 of the BOE Leak)`=="Liquid Line")%>%
+  count()
+
+llwov = Exh_14_raw%>%
+  filter(`Source (Exhibit 14 of the BOE Leak)`=="Liquid Line" & `Sub Category (Exhibit 14 of the BOE Leak)`== "Without Valve")%>%
+  count()
+
+llwv = Exh_14_raw%>%
+  filter(`Source (Exhibit 14 of the BOE Leak)`=="Liquid Line" & `Sub Category (Exhibit 14 of the BOE Leak)`== "With Valve")%>%
+  count()
+
+#Vapor Line
+vl = Exh_14_raw%>%
+  filter(`Source (Exhibit 14 of the BOE Leak)`=="Vapor Line")%>%
+  count()
+
+vlwov = Exh_14_raw%>%
+  filter(`Source (Exhibit 14 of the BOE Leak)`=="Vapor Line" & `Sub Category (Exhibit 14 of the BOE Leak)`== "Without Valve")%>%
+  count()
+
+vlwv = Exh_14_raw%>%
+  filter(`Source (Exhibit 14 of the BOE Leak)`=="Vapor Line" & `Sub Category (Exhibit 14 of the BOE Leak)`== "With Valve")%>%
+  count()
+
+gd = Exh_14_raw%>%
+  filter(`Source (Exhibit 14 of the BOE Leak)`=="Gauging Device")%>%
+  count()
+
+sl = Exh_14_raw%>%
+  filter(`Source (Exhibit 14 of the BOE Leak)`=="Sample Line")%>%
+  count()
+
+tw = Exh_14_raw%>%
+  filter(`Source (Exhibit 14 of the BOE Leak)`=="Thermometer Well")%>%
+  count()
+
+vrv = Exh_14_raw%>%
+  filter(`Source (Exhibit 14 of the BOE Leak)`=="Vacuum Relief Valve")%>%
+  count()
+
+#Bottom Fittings
+bf = Exh_14_raw%>%
+  filter(`Source (Exhibit 14 of the BOE Leak)`=="Bottom Fittings")%>%
+  count()
+
+mv = Exh_14_raw%>%
+  filter(`Source (Exhibit 14 of the BOE Leak)`=="Bottom Fittings" & `Sub Category (Exhibit 14 of the BOE Leak)`=="Main Valve")%>%
+  count()
+
+av = Exh_14_raw%>%
+  filter(`Source (Exhibit 14 of the BOE Leak)`=="Bottom Fittings" & `Sub Category (Exhibit 14 of the BOE Leak)`=="Auxiliary Valve")%>%
+  count()
+
+sb = Exh_14_raw%>%
+  filter(`Source (Exhibit 14 of the BOE Leak)`=="Bottom Fittings" & `Sub Category (Exhibit 14 of the BOE Leak)`=="Stuffing Box")%>%
+  count()
+
+wash = Exh_14_raw%>%
+  filter(`Source (Exhibit 14 of the BOE Leak)`=="Bottom Fittings" & `Sub Category (Exhibit 14 of the BOE Leak)`=="Washout")%>%
+  count()
+
+hc = Exh_14_raw%>%
+  filter(`Source (Exhibit 14 of the BOE Leak)`=="Heater Coils")%>%
+  count()
+
+Sump = Exh_14_raw%>%
+  filter(`Source (Exhibit 14 of the BOE Leak)`=="Sump")%>%
+  count()
+
+soh = Exh_14_raw%>%
+  filter(`Source (Exhibit 14 of the BOE Leak)`=="Tank Shell or Head")%>%
+  count()
+
+other = Exh_14_raw%>%
+  filter(`Source (Exhibit 14 of the BOE Leak)`=="Other")%>%
+  count()
+
+Exh_14_source = rbind(prvv,prv,svdr,svo,mpp,hb,pp,fh,ll,llwov,llwv,vl,vlwov,vlwv,gd,sl,tw,vrv,bf,mv,av,sb,wash,hc,Sump,soh,other)
+
+colnames(Exh_14_source) = year
+Exh_14 = rbind(Exh_14[,2],Exh_14_source)
+
+###############Need change year#########################################
+Exh_14_other = data_frame("2021" = c(nrow(Exh_14_raw),Exh_11[20,3],round(nrow(Exh_14_raw)/Exh_11[20,3],3)))
+Exh_14 = rbind(Exh_14,Exh_14_other)
+```
+
+#Write before barplot
+1. The position of text should change according to the length of bar. (Change 'nudge_y')
+2. Change the year in the title.
+3. Notice some of the percent data like "0.3%" should change number in scales::percent(x,number). Like 1 means 1%, 0.1 means 0.1%
+```{r Exhibit 15, warning= FALSE}
+#Distinguish Pressure and Non-Pressure
+pressure_car = Exh_14_raw%>%
+  filter(str_detect(Spec,paste(c("^105","^112","^114","^120"),collapse = "|")))
+non_pressure_car = Exh_14_raw%>%
+  filter(str_detect(Spec,paste(c("^111","^115","^117","^211"),collapse = "|")))
+
+neither_car = Exh_14_raw%>%
+  filter(str_detect(Spec,"^113"))
+#Filter the data
+Exh_15 = pressure_car%>%
+  group_by(`Source (Exhibit 14 of the BOE Leak)`)%>%
+  count()%>%
+  mutate(percent = round(n/nrow(pressure_car),2))%>%
+  arrange(n)
+Exh_15$percent = scales::percent(Exh_15$percent,1)
+```
+
+```{r Exh 15 plot}
+#Plot
+ggplot(data = Exh_15, aes(x = reorder(Exh_15$`Source (Exhibit 14 of the BOE Leak)`,n) ,y = Exh_15$n))+
+  geom_bar(stat="identity", width = 0.5, fill = "#4682B4")+
+  coord_flip()+
+  labs(title = "Exhibit 15\nNumber of Pressure Tank Car NARs by Component*, U.S. and Canada: 2020")+
+  theme_bw()+
+  theme(plot.title.position = "plot",
+        axis.title.x = element_text(size = rel(1), face = "bold"),
+        axis.title.y = element_text(size = rel(1), face = "bold"),
+        legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = rel(1.15), face = "bold"))+
+  xlab(" ")+
+  scale_y_continuous("NARs",limits = c(0,40),breaks = seq(0,40,10),expand = c(0,0))+
+  theme(panel.grid.major =element_blank(), panel.grid.minor = element_blank())+
+  theme(axis.line = element_line())+
+  theme(panel.border = element_blank())+
+  theme(axis.text = element_text(size = rel(0.9), face = "bold", colour = "black"))+
+  geom_text(aes(label = n),nudge_y= 1.5,size = 4)+
+  geom_text(aes(label = percent),nudge_y= 5,size = 4, color = "blue", fontface="bold.italic")
+```
+
+
+```{r Exhibit 16, warning = False}
+Exh_16 = pressure_car%>%
+  group_by(`Name for Exhibits`)%>%
+  count()%>%
+  mutate(percent = round(n/nrow(pressure_car),2))%>%
+  arrange(desc(n))
+Exh_16$percent = scales::percent(Exh_16$percent,1)
+```
+
+```{r Exh 16 plot}
+#Exhibit plot use name like df+num means some of the number don't need to show in the plot.
+#So be careful about this and change the number in the head function every time you run the code!
+df16 = Exh_16%>%
+  head(11)
+
+ggplot(data = df16, aes(x = reorder(df16$`Name for Exhibits`,n) ,y = df16$n))+
+  geom_bar(stat="identity", width = 0.5, fill = "#4682B4")+
+  coord_flip()+
+  labs(title = "Exhibit 16\nTop Reported NAR Causes for Pressure Tank Cars*, U.S. and Canada: 2021")+
+  theme_bw()+
+  theme(plot.title.position = "plot",
+        axis.title.x = element_text(size = rel(1), face = "bold"),
+        axis.title.y = element_text(size = rel(1), face = "bold"),
+        legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = rel(1.15), face = "bold"))+
+  xlab(" ")+
+  scale_y_continuous("NARs",limits = c(0,20),breaks = seq(0,20,5),expand = c(0,0))+
+  theme(panel.grid.major =element_blank(), panel.grid.minor = element_blank())+
+  theme(axis.line = element_line())+
+  theme(panel.border = element_blank())+
+  theme(axis.text = element_text(size = rel(0.9), face = "bold", colour = "black"))+
+  geom_text(aes(label = n),nudge_y= 1,size = 4)+
+  geom_text(aes(label = percent),nudge_y= 3,size = 4, color = "blue", fontface="bold.italic")
+```
+
+
+```{r Exhibit 17, waring = False}
+Exh_17 = non_pressure_car%>%
+  group_by(`Source (Exhibit 14 of the BOE Leak)`)%>%
+  count()%>%
+  mutate(percent = round(n/nrow(non_pressure_car),3))%>%
+  arrange(desc(n))
+Exh_17$percent = scales::percent(Exh_17$percent,0.1)
+```
+
+```{r Exh 17 plot}
+ggplot(data = Exh_17, aes(x = reorder(Exh_17$`Source (Exhibit 14 of the BOE Leak)`,n) ,y = Exh_17$n))+
+  geom_bar(stat="identity", width = 0.5, fill = "#4682B4")+
+  coord_flip()+
+  labs(title = "Exhibit 17\nNumber of Non-Pressure Tank Car NARs by Component*, U.S. and Canada: 2021")+
+  theme_bw()+
+  theme(plot.title.position = "plot",
+        axis.title.x = element_text(size = rel(1), face = "bold"),
+        axis.title.y = element_text(size = rel(1), face = "bold"),
+        legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = rel(1.15), face = "bold"))+
+  xlab(" ")+
+  scale_y_continuous("NARs",limits = c(0,180),breaks = seq(0,180,45),expand = c(0,0))+
+  theme(panel.grid.major =element_blank(), panel.grid.minor = element_blank())+
+  theme(axis.line = element_line())+
+  theme(panel.border = element_blank())+
+  theme(axis.text = element_text(size = rel(0.9), face = "bold", colour = "black"))+
+  theme(plot.margin = margin(0,0.5,0,0, "cm"))+
+  geom_text(aes(label = n),nudge_y= 5,size = 4)+
+  geom_text(aes(label = percent),nudge_y= 22,size = 4, color = "blue", fontface="bold.italic")
+#ggsave("Exh_17_plot.png")
+```
+
+
+```{r Exhibit 18, waring = False}
+Exh_18 = non_pressure_car%>%
+  group_by(`Name for Exhibits`)%>%
+  count()%>%
+  mutate(percent = round(n/nrow(non_pressure_car),2))%>%
+  arrange(desc(n))
+Exh_18$percent = scales::percent(Exh_18$percent,1)
+```
+
+```{r Exhibit 18 plot, waring = False}
+df18 = Exh_18%>%
+  head(13)
+
+ggplot(data = df18, aes(x = reorder(df18$`Name for Exhibits`,n) ,y = df18$n))+
+  geom_bar(stat="identity", width = 0.5, fill = "#4682B4")+
+  coord_flip()+
+  labs(title = "Exhibit 18\nTop Reported NAR Causes for Non-Pressure Tank Cars*, U.S. and Canada: 2021")+
+  theme_bw()+
+  theme(plot.title.position = "plot",
+        axis.title.x = element_text(size = rel(1), face = "bold"),
+        axis.title.y = element_text(size = rel(1), face = "bold"),
+        legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = rel(1.15), face = "bold"))+
+  xlab(" ")+
+  scale_y_continuous("NARs",limits = c(0,80),breaks = seq(0,80,20),expand = c(0,0))+
+  theme(panel.grid.major =element_blank(), panel.grid.minor = element_blank())+
+  theme(axis.line = element_line())+
+  theme(panel.border = element_blank())+
+  theme(axis.text = element_text(size = rel(0.9), face = "bold", colour = "black"))+
+  geom_text(aes(label = n),nudge_y= 3,size = 4)+
+  geom_text(aes(label = percent),nudge_y= 10,size = 4, color = "blue", fontface="bold.italic")
+```
+
+
+```{r Exhibt 19, warning=FALSE}
+Exh_19_total = nrow(Exh_14_raw%>%
+  filter(`Source (Exhibit 14 of the BOE Leak)`== 'Manway/Pressure Plate'))
+
+Exh_19 = Exh_14_raw%>%
+  filter(`Source (Exhibit 14 of the BOE Leak)`== 'Manway/Pressure Plate')%>%
+  group_by(`Name for Exhibits`)%>%
+  count()%>%
+  mutate(per = round(n/Exh_19_total,2))%>%
+  arrange(desc(n))
+Exh_19$per = scales::percent(Exh_19$per,1)
+```
+
+```{r Exhibt 19 plot, warning=FALSE}
+ggplot(data = Exh_19, aes(x = reorder(Exh_19$`Name for Exhibits`,n) ,y = Exh_19$n))+
+  geom_bar(stat="identity", width = 0.5, fill = "#4682B4")+
+  coord_flip()+
+  labs(title = "Exhibit 19\nTank Car NARs by Manway Cause*, U.S. and Canada: 2021")+
+  theme_bw()+
+  theme(plot.title.position = "plot",
+        axis.title.x = element_text(size = rel(1), face = "bold"),
+        axis.title.y = element_text(size = rel(1), face = "bold"),
+        legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = rel(1.15), face = "bold"))+
+  xlab(" ")+
+  scale_y_continuous("NARs",limits = c(0,80),breaks = seq(0,80,20),expand = c(0,0))+
+  theme(panel.grid.major =element_blank(), panel.grid.minor = element_blank())+
+  theme(axis.line = element_line())+
+  theme(panel.border = element_blank())+
+  theme(axis.text = element_text(size = rel(0.9), face = "bold", colour = "black"))+
+  geom_text(aes(label = n),nudge_y= 3,size = 4)+
+  geom_text(aes(label = per),nudge_y= 10,size = 4, color = "blue", fontface="bold.italic")
+```
+
+
+```{r Exhibt 20, warning=FALSE}
+Exh_20_total = nrow(Exh_14_raw%>%
+  filter(`Source (Exhibit 14 of the BOE Leak)`== 'Bottom Fittings'))
+
+Exh_20 = Exh_14_raw%>%
+  filter(`Source (Exhibit 14 of the BOE Leak)`== 'Bottom Fittings')%>%
+  group_by(`Name for Exhibits`)%>%
+  count()%>%
+  mutate(per = round(n/Exh_20_total,2))%>%
+  arrange(desc(n))
+Exh_20$per = scales::percent(Exh_20$per,1)
+Exh_20$`Name for Exhibits` = str_remove(Exh_20$`Name for Exhibits`,'BOV - ')
+Exh_20$`Name for Exhibits` = str_to_title(Exh_20$`Name for Exhibits`)
+```
+
+```{r Exhibit 20 plot, warning=FALSE}
+ggplot(data = Exh_20, aes(x = reorder(Exh_20$`Name for Exhibits`,n) ,y = Exh_20$n))+
+  geom_bar(stat="identity", width = 0.5, fill = "#4682B4")+
+  coord_flip()+
+  labs(title = "Exhibit 20\nTank Car NARs by Bottom Outlet Cause*, U.S. and Canada: 2021")+
+  theme_bw()+
+  theme(plot.title.position = "plot",
+        axis.title.x = element_text(size = rel(1), face = "bold"),
+        axis.title.y = element_text(size = rel(1), face = "bold"),
+        legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = rel(1.15), face = "bold"))+
+  xlab(" ")+
+  scale_y_continuous("NARs",limits = c(0,11),breaks = seq(0,11,2),expand = c(0,0))+
+  theme(panel.grid.major =element_blank(), panel.grid.minor = element_blank())+
+  theme(axis.line = element_line())+
+  theme(panel.border = element_blank())+
+  theme(plot.margin = margin(0,1,0,0,unit = "cm"))+
+  theme(axis.text = element_text(size = rel(0.9), face = "bold", colour = "black"))+
+  geom_text(aes(label = n),nudge_y= 0.2,size = 4)+
+  geom_text(aes(label = per),nudge_y= 1.2,size = 4, color = "blue", fontface="bold.italic")
+```
+
+
+```{r Exhibit 21, warning=FALSE}
+Exh_21_total = nrow(Exh_14_raw%>%
+  filter(str_detect(`Name for Exhibits`,"^PRV")))
+
+Exh_21 = Exh_14_raw%>%
+  filter(str_detect(`Name for Exhibits`,"^PRV"))%>%
+  group_by(`Name for Exhibits`)%>%
+  count()%>%
+  mutate(per = round(n/Exh_21_total,2))%>%
+  arrange(desc(n))
+Exh_21$per = scales::percent(Exh_21$per,1)
+Exh_21$`Name for Exhibits` = str_remove(Exh_21$`Name for Exhibits`,'PRV - ')
+Exh_21$`Name for Exhibits` = str_to_title(Exh_21$`Name for Exhibits`)
+```
+
+```{r Exhibit 21 plot, warning= FALSE}
+ggplot(data = Exh_21, aes(x = reorder(Exh_21$`Name for Exhibits`,n) ,y = Exh_21$n))+
+  geom_bar(stat="identity", width = 0.5, fill = "#4682B4")+
+  coord_flip()+
+  labs(title = "Exhibit 21\nTank Car NARs by Pressure Relief Valve Cause*, U.S. and Canada: 2021")+
+  theme_bw()+
+  theme(plot.title.position = "plot",
+        axis.title.x = element_text(size = rel(1), face = "bold"),
+        axis.title.y = element_text(size = rel(1), face = "bold"),
+        legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = rel(1.15), face = "bold"))+
+  xlab(" ")+
+  scale_y_continuous("NARs",limits = c(0,11),breaks = seq(0,11,2),expand = c(0,0))+
+  theme(panel.grid.major =element_blank(), panel.grid.minor = element_blank())+
+  theme(axis.line = element_line())+
+  theme(panel.border = element_blank())+
+  theme(plot.margin = margin(0,1,0,0,unit = "cm"))+
+  theme(axis.text = element_text(size = rel(0.9), face = "bold", colour = "black"))+
+  geom_text(aes(label = n),nudge_y= 0.2,size = 4)+
+  geom_text(aes(label = per),nudge_y= 1.2,size = 4, color = "blue", fontface="bold.italic")
+```
+
+
+```{r Exhibit 22, warning=FALSE}
+Exh_22_total = nrow(Exh_14_raw%>%
+  filter(str_detect(`Name for Exhibits`,"^Safety vent")))
+
+Exh_22 = Exh_14_raw%>%
+  filter(str_detect(`Name for Exhibits`,"^Safety vent"))%>%
+  group_by(PSN)%>%
+  count()%>%
+  mutate(per = round(n/Exh_22_total,2))%>%
+  arrange(desc(n))
+Exh_22$per = scales::percent(Exh_22$per,1)
+```
+
+```{r Exhibit 22 plot, warning=FALSE}
+ggplot(data = Exh_22, aes(x = reorder(Exh_22$PSN,n) ,y = Exh_22$n))+
+  geom_bar(stat="identity", width = 0.4, fill = "#4682B4")+
+  coord_flip()+
+  labs(title = "Exhibit 22\nSafety-Vent-Caused Tank Car NARs by Commodity*, U.S. and Canada: 2021")+
+  theme_bw()+
+  theme(plot.title.position = "plot",
+        axis.title.x = element_text(size = rel(1), face = "bold"),
+        axis.title.y = element_text(size = rel(1), face = "bold"),
+        legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = rel(1.15), face = "bold"))+
+  xlab(" ")+
+  scale_y_continuous("NARs",limits = c(0,5),breaks = seq(0,5,1),expand = c(0,0))+
+  theme(panel.grid.major =element_blank(), panel.grid.minor = element_blank())+
+  theme(axis.line = element_line())+
+  theme(panel.border = element_blank())+
+  theme(plot.margin = margin(0,1,0,0,unit = "cm"))+
+  theme(axis.text = element_text(size = rel(0.9), face = "bold", colour = "black"))+
+  geom_text(aes(label = n),nudge_y= 0.2,size = 5)+
+  geom_text(aes(label = per),nudge_y= 0.7,size = 5, color = "blue", fontface="bold.italic")
+```
+
+
+```{r Exhibit 23, warning=FALSE}
+Exh_23_total = nrow(Exh_14_raw%>%
+  filter(str_detect(`Name for Exhibits`,"^Liquid line")))
+
+Exh_23 = Exh_14_raw%>%
+  filter(str_detect(`Name for Exhibits`,"^Liquid line"))%>%
+  group_by(PSN)%>%
+  count()%>%
+  mutate(per = round(n/Exh_23_total,2))%>%
+  arrange(desc(n))
+Exh_23$per = scales::percent(Exh_23$per,1)
+```
+
+```{r Exhibit 23 plot, warning=FALSE}
+df23 = Exh_23%>%
+  head(7)
+
+ggplot(data = df23, aes(x = reorder(df23$PSN,n) ,y = df23$n))+
+  geom_bar(stat="identity", width = 0.5, fill = "#4682B4")+
+  coord_flip()+
+  labs(title = "Exhibit 23\nLiquid-Line-Caused Tank Car NARs by Commodity*, U.S. and Canada: 2021")+
+  theme_bw()+
+  theme(plot.title.position = "plot",
+        axis.title.x = element_text(size = rel(1), face = "bold"),
+        axis.title.y = element_text(size = rel(1), face = "bold"),
+        legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = rel(1.15), face = "bold"))+
+  xlab(" ")+
+  scale_y_continuous("NARs",limits = c(0,22),breaks = seq(0,22,5),expand = c(0,0))+
+  theme(panel.grid.major =element_blank(), panel.grid.minor = element_blank())+
+  theme(axis.line = element_line())+
+  theme(panel.border = element_blank())+
+  theme(plot.margin = margin(0,1,0,0,unit = "cm"))+
+  theme(axis.text = element_text(size = rel(0.9), face = "bold", colour = "black"))+
+  geom_text(aes(label = n),nudge_y= 0.5,size = 4)+
+  geom_text(aes(label = per),nudge_y= 2,size = 4, color = "blue", fontface="bold.italic")
+```
+
+
+```{r Exhibit 24, warning=FALSE}
+Exh_24_total = nrow(Exh_14_raw%>%
+  filter(str_detect(`Name for Exhibits`,"^PRV")))
+
+Exh_24 = Exh_14_raw%>%
+  filter(str_detect(`Name for Exhibits`,"^PRV"))%>%
+  group_by(PSN)%>%
+  count()%>%
+  mutate(per = round(n/Exh_24_total,2))%>%
+  arrange(desc(n))
+Exh_24$per = scales::percent(Exh_24$per,1)
+```
+
+```{r}
+df24 = Exh_24%>%
+  head(4)
+
+ggplot(data = df24, aes(x = reorder(df24$PSN,n) ,y = df24$n))+
+  geom_bar(stat="identity", width = 0.3, fill = "#4682B4")+
+  coord_flip()+
+  labs(title = "Exhibit 24\nPressure Relief Valve-Caused Tank Car NARs by Commodity*, U.S. and Canada: 2021")+
+  theme_bw()+
+  theme(plot.title.position = "plot",
+        axis.title.x = element_text(size = rel(1), face = "bold"),
+        axis.title.y = element_text(size = rel(1), face = "bold"),
+        legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = rel(1.15), face = "bold"))+
+  xlab(" ")+
+  scale_y_continuous("NARs",limits = c(0,11),breaks = seq(0,11,2),expand = c(0,0))+
+  theme(panel.grid.major =element_blank(), panel.grid.minor = element_blank())+
+  theme(axis.line = element_line())+
+  theme(panel.border = element_blank())+
+  theme(plot.margin = margin(0,1,0,1,unit = "cm"))+
+  theme(axis.text = element_text(size = rel(0.9), face = "bold", colour = "black"))+
+  geom_text(aes(label = n),nudge_y= 0.3,size = 5)+
+  geom_text(aes(label = per),nudge_y= 1.2,size = 5, color = "blue", fontface="bold.italic")
+```
+
+```{r Exhibit 25, warning=FALSE}
+Exh_25_total = nrow(new14%>%
+  filter(PSN == "Alcohols, NOS" & `Cause Code` != 'NA'))
+
+Exh_25 = Exh_14_raw%>%
+  filter(PSN == "Alcohols, NOS")%>%
+  group_by(`Name for Exhibits`)%>%
+  count()%>%
+  mutate(per = round(n/Exh_25_total,2))%>%
+  arrange(desc(n))
+Exh_25$per = scales::percent(Exh_25$per,1)
+```
+
+```{r Exhibit 25 plot, warning=FALSE}
+df25 = Exh_25%>%
+  head(8)
+
+ggplot(data = df25, aes(x = reorder(df25$`Name for Exhibits`,n) ,y = df25$n))+
+  geom_bar(stat="identity", width = 0.5, fill = "#4682B4")+
+  coord_flip()+
+  labs(title = "Exhibit 25\nNumber of Tank Car NARs for Alcohols N. O. S. by Cause*, U.S. and Canada: 2021")+
+  theme_bw()+
+  theme(plot.title.position = "plot",
+        axis.title.x = element_text(size = rel(1), face = "bold"),
+        axis.title.y = element_text(size = rel(1), face = "bold"),
+        legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = rel(1.15), face = "bold"))+
+  xlab(" ")+
+  scale_y_continuous("NARs",limits = c(0,11),breaks = seq(0,11,2),expand = c(0,0))+
+  theme(panel.grid.major =element_blank(), panel.grid.minor = element_blank())+
+  theme(axis.line = element_line())+
+  theme(panel.border = element_blank())+
+  theme(plot.margin = margin(0,1,0,1,unit = "cm"))+
+  theme(axis.text = element_text(size = rel(0.9), face = "bold", colour = "black"))+
+  geom_text(aes(label = n),nudge_y= 0.3,size = 4)+
+  geom_text(aes(label = per),nudge_y= 1.2,size = 4, color = "blue", fontface="bold.italic")
+```
+
+```{r Exhibit 26, warning=FALSE}
+Exh_26_total = nrow(new14%>%
+  filter(PSN == "Ammonia Anhydrous" & `Cause Code` != 'NA'))
+
+Exh_26 = Exh_14_raw%>%
+  filter(PSN == "Ammonia Anhydrous")%>%
+  group_by(`Name for Exhibits`)%>%
+  count()%>%
+  mutate(per = round(n/Exh_26_total,2))%>%
+  arrange(desc(n))
+Exh_26$per = scales::percent(Exh_26$per,1)
+```
+
+```{r}
+ggplot(data = Exh_26, aes(x = reorder(Exh_26$`Name for Exhibits`,n) ,y = Exh_26$n))+
+  geom_bar(stat="identity", width = 0.3, fill = "#4682B4")+
+  coord_flip()+
+  labs(title = "Exhibit 26\nNumber of Tank Car NARs for Anhydrous Ammonia by Cause*, U.S. and Canada: 2021")+
+  theme_bw()+
+  theme(plot.title.position = "plot",
+        axis.title.x = element_text(size = rel(1), face = "bold"),
+        axis.title.y = element_text(size = rel(1), face = "bold"),
+        legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = rel(1.15), face = "bold"))+
+  xlab(" ")+
+  scale_y_continuous("NARs",limits = c(0,3),breaks = seq(0,3,1),expand = c(0,0))+
+  theme(panel.grid.major =element_blank(), panel.grid.minor = element_blank())+
+  theme(axis.line = element_line())+
+  theme(panel.border = element_blank())+
+  theme(plot.margin = margin(0,1,0,1,unit = "cm"))+
+  theme(axis.text = element_text(size = rel(0.9), face = "bold", colour = "black"))+
+  geom_text(aes(label = n),nudge_y= 0.2,size = 5)+
+  geom_text(aes(label = per),nudge_y= 0.8,size = 5, color = "blue", fontface="bold.italic")
+```
+
+
+```{r Exhibit 27, warning=FALSE}
+Exh_27_total = nrow(new14%>%
+  filter(PSN == "ETM" & `Cause Code` != 'NA'))
+
+Exh_27 = Exh_14_raw%>%
+  filter(PSN == "ETM")%>%
+  group_by(`Name for Exhibits`)%>%
+  count()%>%
+  mutate(per = round(n/Exh_27_total,2))%>%
+  arrange(desc(n))
+
+Exh_27$per = scales::percent(Exh_27$per,1)
+```
+
+```{r}
+ggplot(data = Exh_27, aes(x = reorder(Exh_27$`Name for Exhibits`,n) ,y = Exh_27$n))+
+  geom_bar(stat="identity", width = 0.2, fill = "#4682B4")+
+  coord_flip()+
+  labs(title = "Exhibit 27\nNumber of Tank Car NARs for Elevated Temperature Materials by Cause*, U.S. and Canada: 2021")+
+  theme_bw()+
+  theme(plot.title.position = "plot",
+        axis.title.x = element_text(size = rel(1.5), face = "bold"),
+        axis.title.y = element_text(size = rel(1.5), face = "bold"),
+        legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = rel(1.15), face = "bold"))+
+  xlab(" ")+
+  scale_y_continuous("NARs",limits = c(0,3),breaks = seq(0,3,1),expand = c(0,0))+
+  theme(panel.grid.major =element_blank(), panel.grid.minor = element_blank())+
+  theme(axis.line = element_line())+
+  theme(panel.border = element_blank())+
+  theme(plot.margin = margin(1,1,1,1,unit = "cm"))+
+  theme(axis.text = element_text(size = rel(0.9), face = "bold", colour = "black"))+
+  geom_text(aes(label = n),nudge_y= 0.1,size = 5)+
+  geom_text(aes(label = per),nudge_y= 0.4,size = 5, color = "blue", fontface="bold.italic")
+#Remeber ggsave can modify the size of picture which is different from what we seen in Rstudio
+#ggsave("Exh_27.png", width = 10, height = 5)
+```
+
+```{r Exhibit 28, warning=FALSE}
+Exh_28_total = nrow(new14%>%
+  filter(UNNA == "UN1203" & `Cause Code` != 'NA'))
+
+Exh_28 = Exh_14_raw%>%
+  filter(UNNA == "UN1203")%>%
+  group_by(`Name for Exhibits`)%>%
+  count()%>%
+  mutate(per = round(n/Exh_28_total,2))%>%
+  arrange(desc(n))
+
+Exh_28$per = scales::percent(Exh_28$per,1)
+```
+
+```{r}
+ggplot(data = Exh_28, aes(x = reorder(Exh_28$`Name for Exhibits`,n) ,y = Exh_28$n))+
+  geom_bar(stat="identity", width = 0.3, fill = "#4682B4")+
+  coord_flip()+
+  labs(title = "Exhibit 28\nNumber of Tank Car NARs for Gasoline by Cause*, U.S. and Canada: 2021")+
+  theme_bw()+
+  theme(plot.title.position = "plot",
+        axis.title.x = element_text(size = rel(1), face = "bold"),
+        axis.title.y = element_text(size = rel(1), face = "bold"),
+        legend.position = "none",
+        plot.title = element_text(hjust = 0.5, size = rel(1.15), face = "bold"))+
+  xlab(" ")+
+  scale_y_continuous("NARs",limits = c(0,3),breaks = seq(0,3,1),expand = c(0,0))+
+  theme(panel.grid.major =element_blank(), panel.grid.minor = element_blank())+
+  theme(axis.line = element_line())+
+  theme(panel.border = element_blank())+
+  theme(plot.margin = margin(0,1,0,1,unit = "cm"))+
+  theme(axis.text = element_text(size = rel(0.9), face = "bold", colour = "black"))+
+  geom_text(aes(label = n),nudge_y= 0.2,size = 5)+
+  geom_text(aes(label = per),nudge_y= 0.8,size = 5, color = "blue", fontface="bold.italic")
+```
+
+```{r Exhibit 29, warning=FALSE}
+Exh_29_total = nrow(new14%>%
+  filter(PSN == "Hydrochloric Acid" & `Cause Code` != 'NA'))
+
+Exh_29 = Exh_14_raw%>%
+  filter(PSN == "Hydrochloric Acid")%>%
+  group_by(`Name for Exhibits`)%>%
+  count()%>%
+  mutate(per = round(n/Exh_29_total,3))%>%
+  arrange(desc(n))
+```
+
+```{r Exhibit 30, warning=FALSE}
+Exh_30_total = nrow(new14%>%
+  filter(PSN == "LPG" & `Cause Code` != 'NA'))
+
+Exh_30 = Exh_14_raw%>%
+  filter(PSN == "LPG")%>%
+  group_by(`Name for Exhibits`)%>%
+  count()%>%
+  mutate(per = round(n/Exh_30_total,3))%>%
+  arrange(desc(n))
+```
+
+```{r Exhibit 31, warning=FALSE}
+Exh_31_total = nrow(new14%>%
+  filter(PSN == "Sodium Hydroxide" & `Cause Code` != 'NA'))
+
+Exh_31 = Exh_14_raw%>%
+  filter(PSN == "Sodium Hydroxide")%>%
+  group_by(`Name for Exhibits`)%>%
+  count()%>%
+  mutate(per = round(n/Exh_31_total,2))%>%
+  arrange(desc(n))
+```
+
+```{r data preparing for Exhibit 32-35, warning = FALSE}
+#Exh_32_data = read_excel("Exhibit 31-34.xlsx", sheet = "2010-2018")
+#Exh_32_data = Exh_32_data[,c(3,14,15,17,31,32,85,86,87,107,106)]
+#colnames(Exh_32_data) = c("Railroad","PSN Group","Hazard Class","UN_NA","Cartype","Car_Spec (Stenciled Shipping Spec.)","NAR_Cause_Code","NAR_Cause_Code2","NAR_Cause_Code3","Injuries","Year")
+#library("writexl")
+#write_xlsx(Exh_32_data,"Exh_32_data.xlsx")
+
+Exh_injuries = df%>%
+  filter(Injuries != 0 | Fatality != 0)%>%
+  select("Railroad","PSN Group","Hazard Class","UN_NA","Cartype","Car_Spec (Stenciled Shipping Spec.)","NAR_Cause_Code","NAR_Cause_Code2","NAR_Cause_Code3","Injuries","Fatality")%>%
+  mutate(Injuries = Injuries + Fatality)
+Exh_injuries = Exh_injuries[,-11]
+
+Injuries_year = data_frame(Year = rep(year,nrow(Exh_injuries)))
+Exh_injuries = cbind(Exh_injuries,Injuries_year)
+
+Exh_32_data = rbind(Exh_32_data,Exh_injuries)
+```
+
+```{r Exhibit 32, warning=FALSE}
+Exh_32 = aggregate(Exh_32_data$Injuries, by = list(Year = Exh_32_data$Year), sum)
+```
+
+```{r Exhibit 33, warning=FALSE}
+#Data prepared for Exh_33
+Exh_33 = Exh_32_data%>%
+  filter(Year >= 2016)
+Exh_33 = aggregate(Exh_33$Injuries, by = list(Type = Exh_33$`PSN Group`), sum)
+Exh_33 = arrange(Exh_33,desc(x))
+```
+
+```{r Exhibit 34, warning=FALSE}
+#Data prepared for Exh_34
+code34_1 = Exh_32_data[,c(2,7,10,11)]
+code34_2 = Exh_32_data[,c(2,8,10,11)]
+code34_3 = Exh_32_data[,c(2,9,10,11)]
+colnames(code34_1) = c("PSN","Cause Code","Injuries","Year")
+colnames(code34_2) = c("PSN","Cause Code","Injuries","Year")
+colnames(code34_3) = c("PSN","Cause Code","Injuries","Year")
+code34 = rbind(code34_1,code34_2,code34_3)
+Exh_34_data = merge(df_14,code34,"Cause Code")
+
+#Output
+Exh_34_raw = Exh_34_data%>%
+  filter(Year >= 2015)
+
+Exh_34 = aggregate(Exh_34_raw$Injuries, by = list(Type = Exh_34_raw$`Source (Exhibit 14 of the BOE Leak)`), sum)
+Exh_34 = arrange(Exh_34,desc(x))
+```
+
+```{r Exhibit 35, warning=FALSE}
+Exh_35 = aggregate(Exh_34_raw$Injuries, by = list(Type = Exh_34_raw$`Name for Exhibits`), sum)
+Exh_35 = arrange(Exh_35,desc(x))
+```
+
+```{r}
+#sheets = list("Exh_11" = Exh_11, "Exh_12" = Exh_12, "Exh_13" = Exh_13, "Exh_14" = Exh_14, "Exh_15" = Exh_15, "Exh_16" = Exh_16, "Exh_17" = Exh_17, "Exh_18" = Exh_18, "Exh_19" = Exh_19, "Exh_20" = Exh_20, "Exh_21" = Exh_21, "Exh_22" = Exh_22, "Exh_23" = Exh_23, "Exh_24" = Exh_24,"Exh_25" = Exh_25, "Exh_26" = Exh_26, "Exh_27" = Exh_27,"Exh_28" = Exh_28, "Exh_29" = Exh_29, "Exh_30" = Exh_30, "Exh_31" = Exh_31, "Exh_32" = Exh_32, "Exh_33" = Exh_33,"Exh_34" = Exh_34, "Exh_35" = Exh_35)
+#write_xlsx(sheets,"NAR_report_2022_Exh11_35.xlsx")
+```
+
