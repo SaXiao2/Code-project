@@ -4,6 +4,5 @@ The data of this project is download from google finance. And sentiment data was
 
 The project called "Exh 14- " is a project I finished in RailTEC group. The purpose of this project is to use code to automatically grab data from multiple databases and automatically generate the required plots for 'ANNUAL REPORT OF NON-ACCIDENT RELEASES OF HAZARDOUS MATERIALS TRANSPORTED BY RAIL'. 
 It's not the final version of the project, I'm currently trying to figure out how to get code to automatically grab the data and create a whole new database(The data provided by the railroads is very confusing and there are major problems with the format). This will make it easier for RailTEC to use the relevant data at any time in the future.
-The data of this project is confidential. I get permission from our group to share the code and some of the plots.(Exh 12, 14, 15, 16, 17 plots)
 
 I also have some other coding related projects, but in my opinion, the two projects I am currently showing are the more valuable ones for me in terms of data modeling and data analysis.
